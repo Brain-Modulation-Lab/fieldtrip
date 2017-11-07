@@ -516,7 +516,7 @@ switch headerformat
     % Converter' from the original .mpx files recorded by NeuroOmega 
     chantype_dict={'micro','macro',     'analog', 'digital','micro_lfp','macro_lfp','micro_hp','add_analog';...
                    'CRAW', 'CMacro_RAW','CANALOG','CDIG',   'CLFP',     'CMacro',   'CSPK'    ,'CADD_ANALOG'};            
-    neuroomega_param={'_KHz','_KHz_Orig','_Gain','_BitResolution','_TimeBegin','_TimeEnd'}; 
+    neuroomega_param={'_KHz','_KHz_Orig','_Gain','_BitResolution','_TimeBegin','_TimeEnd','_Down','_Up','_PrevStatus'}; 
     
     %identifying channels to be loaded
     orig = matfile(filename);

@@ -287,7 +287,7 @@ elseif usetime
 
     % perform the resampling
     if length(data.time{itr})>1
-      data.trial{itr} = interp1(data.time{itr}', data.trial{itr}', cfg.time{itr}', cfg.method)';
+      data.trial{itr} = interp1(data.time{itr}', data.trial{itr}', cfg.time{itr}', cfg.method, 0)';
     else
       data.trial{itr} = repmat(data.trial{itr}, [1 length(cfg.time{itr}')]);
     end
