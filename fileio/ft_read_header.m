@@ -13,7 +13,6 @@ function [hdr] = ft_read_header(filename, varargin)
 %   'checkmaxfilter' = boolean, whether to check that maxfilter has been correctly applied (default = true)
 %   'chanindx'       = list with channel indices in case of different sampling frequencies (only for EDF)
 %   'coordsys'       = string, 'head' or 'dewar' (default = 'head')
-%   'coilaccuracy'   = can be empty or a number (0, 1 or 2) to specify the accuracy (default = [])
 %   'chantype'       = string or cell of strings, channel types to be read (NeuroOmega, BlackRock). 
 %
 % This returns a header structure with the following elements
@@ -39,7 +38,7 @@ function [hdr] = ft_read_header(filename, varargin)
 %
 % Use cfg.chantype='chaninfo' to get hdr.chaninfo table. For BlackRock 
 % specify decimation with chantype:skipfactor (e.g. cfg.chantype='analog:10')
-%                      
+%
 % Depending on the file format, additional header information can be
 % returned in the hdr.orig subfield.
 %
@@ -157,6 +156,8 @@ retry          = ft_getopt(varargin, 'retry', false);     % the default is not t
 chanindx       = ft_getopt(varargin, 'chanindx');         % this is used for EDF with different sampling rates
 coordsys       = ft_getopt(varargin, 'coordsys', 'head'); % this is used for ctf and neuromag_mne, it can be head or dewar
 coilaccuracy   = ft_getopt(varargin, 'coilaccuracy');     % empty, or a number between 0-2
+chantype       = ft_getopt(varargin, 'chantype', {});   
+if ~iscell(chantype); chantype = {chantype}; end
 
 %2017.10.10 AB: This parameter is used to select channels in NeuroOmega files, which contain
 %channels of different sampling rate. Matches the output field hdr.chantype.
@@ -438,7 +439,38 @@ switch headerformat
     fclose(orig.Head.FILE.FID);
     
   case 'blackrock_nev'
-    ft_error('this still needs some work');
+    % read header for nsX file associated with NEV file
+    % use ft_read_event to read event information in .nev file
+    
+    ft_hastoolbox('NPMK', 1);   
+    % ensure that the filename contains a full path specification,
+    % otherwise the low-level function fails
+    [p,n,~] = fileparts(filename);
+    if isempty(p)
+      filename = which(filename);
+      [p,n,~] = fileparts(filename);
+    end
+		
+    NEV = openNEV(filename,'noread','nosave');
+    
+    %searching for associated nsX file in same folder
+    files=dir(strcat(fullfile(p,n),'.ns*')); 
+    if isempty(files)
+      ft_error('no .ns* file associated to %s in %s',n,p);
+    end
+    
+    %searching for nsX file with same sampling freq that NEV
+    for i=1:numel(files)
+      nsX_hdr = ft_read_header(fullfile(p,files(i).name),'chantype',chantype);
+      if nsX_hdr.Fs == NEV.MetaTags.SampleRes
+        hdr = nsX_hdr;
+        break
+      end
+    end
+    
+    if isempty(hdr)
+      ft_error('no .ns* file with same sampling frequency as %s (%i)',n,NEV.MetaTags.SampleRes);
+    end
     
   case 'blackrock_nsx'
     ft_hastoolbox('NPMK', 1);
@@ -510,18 +542,22 @@ switch headerformat
     hdr.chanunit    = channelsunit;
     hdr.orig        = orig;
     hdr.skipfactor  = skipfactor;
-    
+
 	case 'neuroomega_mat'
     % These are MATLAB *.mat files created by the software 'Map File
     % Converter' from the original .mpx files recorded by NeuroOmega 
     chantype_dict={'micro','macro',     'analog', 'digital','micro_lfp','macro_lfp','micro_hp','add_analog';...
                    'CRAW', 'CMacro_RAW','CANALOG','CDIG',   'CLFP',     'CMacro',   'CSPK'    ,'CADD_ANALOG'};            
-    neuroomega_param={'_KHz','_KHz_Orig','_Gain','_BitResolution','_TimeBegin','_TimeEnd','_Down','_Up','_PrevStatus'}; 
+    neuroomega_param={'_KHz','_KHz_Orig','_Gain','_BitResolution','_TimeBegin','_TimeEnd'}; 
     
     %identifying channels to be loaded
     orig = matfile(filename);
     fields_orig=who(orig);
-    is_param=endsWith(fields_orig,neuroomega_param);
+    %is_param=endsWith(fields_orig,neuroomega_param); %Matlab 2017a
+    is_param=zeros(length(fields_orig),1); %ugly workaround for endsWith in Matlab 2015a
+    for i=1:length(neuroomega_param)
+        is_param = is_param | ~cellfun('isempty',regexp(fields_orig,strcat(neuroomega_param(i),'$'),'start'));
+    end
     channels={}; channelstype={};
     for c = 1:length(chantype)
         chantype_dict_sel=strcmpi(chantype_dict(1,:),chantype{c});
@@ -576,7 +612,7 @@ switch headerformat
         ft_error(['Incorrect cfg.chantype, use one of ',strjoin(unique(chaninfo.chantype),' ')])
       end
     end
-    
+
     %building header
     hdr.Fs          = Fs;
     hdr.nChans      = length(channels);
@@ -589,48 +625,7 @@ switch headerformat
     hdr.orig        = orig;  
     hdr.chantype    = channelstype;
     hdr.chanunit    = repmat({'uV'},  size(hdr.label));
-   
-  case 'audio_wav'
-    %looking for more wav files in folder with same basename
-    TRACK_TOKEN='Tr';
-    [p, f, x] = fileparts(filename);
-    s=regexp(f,strcat('(',TRACK_TOKEN,')(\d*)'));
-    session_filenames=dir(char(strcat(p,filesep,extractBetween(f,1,s-1),TRACK_TOKEN,'*',x)));
-    info=cellfun(@(x) audioinfo(strcat(p,filesep,x)),{session_filenames(:).name});
-    
-    %cheking consistency
-    Fs=uniquetol([info(:).SampleRate],1e-6);
-    nSamples=uniquetol([info(:).TotalSamples],1e-6);
-    if length(Fs)>1
-    	ft_error('channels with different sampling rates are not supported');
-    end
-    if length(nSamples)>1
-        ft_error('channels with different number of samples are not supported');
-    end
 
-    channels={};
-    for i=1:numel(info)
-        [~, fi, ~] = fileparts(info(i).Filename);
-        tr=regexp(fi,strcat('(',TRACK_TOKEN,')(\d*)'),'match');
-        if info(i).NumChannels > 1
-            for j=1:info(i).NumChannels
-                channels = cat(1,channels, strcat(tr{1},'_c',num2str(j)));
-            end
-        else
-            channels = cat(1,channels,tr{1});      
-        end
-    end
-    
-    hdr.Fs          = Fs;
-    hdr.nChans      = numel(channels);
-    hdr.nSamples    = nSamples;
-    hdr.nSamplesPre = 0;
-    hdr.nTrials     = 1;
-    hdr.label       = deblank(channels);
-    hdr.orig        = info;  
-    hdr.chantype    = repmat({'Audio'},  size(hdr.label));
-    hdr.chanunit    = repmat({'au'},  size(hdr.label));
-    
   case {'brainvision_vhdr', 'brainvision_seg', 'brainvision_eeg', 'brainvision_dat'}
     orig = read_brainvision_vhdr(filename);
     hdr.Fs          = orig.Fs;
