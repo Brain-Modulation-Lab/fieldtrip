@@ -441,7 +441,7 @@ switch dataformat
       filename = which(filename);
     end
 
-    chan_sel=ismember(hdr.label,deblank({hdr.orig.ElectrodesInfo.Label})); % matlab 2015a
+    chan_sel=ismember(deblank({hdr.orig.ElectrodesInfo.Label}),hdr.label); % matlab 2015a
     %chan_sel=contains({hdr.orig.ElectrodesInfo.Label},hdr.label); %matlab 2017a
 
     orig = openNSx(filename, 'channels',find(chan_sel),...
