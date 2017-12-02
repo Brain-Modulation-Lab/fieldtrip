@@ -1719,15 +1719,26 @@ switch eventformat
     
   case 'neuroomega_mat'
     
-    hdr = ft_read_header(filename, 'headerformat', eventformat, 'chantype', 'chaninfo');
-    
+    hdr = ft_read_header(filename, 'headerformat', eventformat, 'chantype', 'chaninfo');   
     fields_orig=who(hdr.orig); %getting digital event channels
+    
+    % extracting time begin
+    if ismember('CANALOG_IN_1_TimeBegin',fields_orig)
+      TimeBegin = hdr.orig.('CANALOG_IN_1_TimeBegin');
+    else
+      ft_error('CANALOG_IN_1_TimeBegin required to load event');
+    end
+    
     fields_orig=fields_orig(startsWith(fields_orig,'CDIG_IN')); %compat/matlablt2016b/startsWidth.m     
+    
+    if isempty(fields_orig)
+      ft_error('No NeuroOmega events in file %s',filename);
+    end
     
     rx=regexp(fields_orig,'^CDIG_IN_{1}(\d+)[a-zA-Z_]*','tokens');
     dig_channels=unique(cellfun(@(x) str2num(x{1}), [rx{:}]));
    
-    event.type=[]; event.sample=[]; event.value=[];
+    %event.type=[]; event.sample=[]; event.value=[];
     if ~ismember(detectflank,{'up','down','both'})
       ft_error('incorrect specification of ''detectflank''');
     end
@@ -1735,10 +1746,12 @@ switch eventformat
       for i=1:length(dig_channels)
         channel = ['CDIG_IN_' num2str(dig_channels(i)) '_Up'];
         data = hdr.orig.(channel);
+        t0 = hdr.orig.(['CDIG_IN_' num2str(dig_channels(i)) '_TimeBegin']) - TimeBegin;
+        Fs = hdr.orig.(['CDIG_IN_' num2str(dig_channels(i)) '_KHz']) * 1000;
         for j=1:length(hdr.orig.(channel))
           event(end+1).type = channel;
           event(end  ).value = dig_channels(i);
-          event(end  ).sample = data(j);
+          event(end  ).sample = t0 + data(j) ./ Fs; %events in seconds from begging of file
         end
       end
     end
@@ -1746,10 +1759,12 @@ switch eventformat
       for i=1:length(dig_channels)
         channel = ['CDIG_IN_' num2str(dig_channels(i)) '_Down'];
         data = hdr.orig.(channel);
+        t0 = hdr.orig.(['CDIG_IN_' num2str(dig_channels(i)) '_TimeBegin']) - TimeBegin;
+        Fs = hdr.orig.(['CDIG_IN_' num2str(dig_channels(i)) '_KHz']) * 1000;
         for j=1:length(hdr.orig.(channel))
           event(end+1).type = channel;
           event(end  ).value = dig_channels(i);
-          event(end  ).sample = data(j);
+          event(end  ).sample = t0 + data(j) ./ Fs; %events in seconds from begging of file
         end
       end
     end  
@@ -2076,7 +2091,7 @@ switch eventformat
     % 'noread' prevents reading of the spike waveforms 
     % 'nosave' prevents the automatic conversion of
     % the .nev file as a .mat file
-    orig = openNEV(filename, 'noread', 'nosave')
+    orig = openNEV(filename, 'noread', 'nosave');
 
     if orig.MetaTags.SampleRes ~= 30000
       error('sampling rate is different from 30 kHz') 
