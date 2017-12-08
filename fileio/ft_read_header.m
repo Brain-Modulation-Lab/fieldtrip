@@ -1962,7 +1962,7 @@ switch headerformat
     % These are MATLAB *.mat files created by the software 'Map File
     % Converter' from the propietary .mpx files recorded by NeuroOmega 
     chantype_dict={'micro','macro',     'analog', 'micro_lfp','macro_lfp','micro_hp','add_analog';...
-                   'CRAW', 'CMacro_RAW','CANALOG', 'CLFP',     'CMacro',   'CSPK'    ,'CADD_ANALOG'};            
+                   'CRAW', 'CMacro_RAW','CANALOG', 'CLFP',     'CMacro_LFP',   'CSPK'    ,'CADD_ANALOG'};            
     neuroomega_param={'_KHz','_KHz_Orig','_Gain','_BitResolution','_TimeBegin','_TimeEnd'}; 
     
     %identifying channels to be loaded
