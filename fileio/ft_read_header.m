@@ -502,7 +502,9 @@ switch headerformat
       end
       chan_sel=strncmpi(orig_label,chantype{c},length(chantype{c}));
       if sum(chan_sel)==0
-          ft_warning(strjoin({'unknown chantype ',chantype{c}}))
+        if ~strcmp(chantype{c},'chaninfo')
+          ft_warning(strjoin({'unknown chantype ',chantype{c}}));
+        end
       else
         channels=[channels, orig_label(chan_sel)];
         channelsunit=[channelsunit, orig_unit(chan_sel)];
@@ -518,13 +520,12 @@ switch headerformat
     end
     
     %If no channel selected print table with available channels and chantypes
-    if isempty(channels) 
+    if strcmpi(chantype{1},'chaninfo')
       chaninfo %printing table for user (should probably create a ft_print_table function
-      ft_warning(['No channel selected, see hdr.chaninfo. \nAvailable CFG.CHANTYPEs are: ',strjoin(unique(chaninfo.chantype),' ')])
-      channelstype=chaninfo.chantype; hdr.chaninfo=chaninfo;
-      if isempty(chantype) || ~strcmpi(chantype{1},'chaninfo')
-        ft_error('Use chantype=''chaninfo'' for ft_read_header to return hdr with hdf.chaninfo')
-      end
+    	channelstype=chaninfo.chantype; hdr.chaninfo=chaninfo;
+    elseif isempty(channels) 
+    	ft_warning(['No channel selected, see hdr.chaninfo. \nAvailable CFG.CHANTYPEs are: ',strjoin(unique(chaninfo.chantype),' ')]);
+      ft_error('Use chantype=''chaninfo'' for ft_read_header to return hdr with hdf.chaninfo');
     end
     
     hdr.Fs          = orig.MetaTags.SamplingFreq/skipfactor;
