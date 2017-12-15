@@ -521,8 +521,8 @@ switch headerformat
     
     %If no channel selected print table with available channels and chantypes
     if strcmpi(chantype{1},'chaninfo')
-      chaninfo %printing table for user (should probably create a ft_print_table function
-    	channelstype=chaninfo.chantype; hdr.chaninfo=chaninfo;
+    	channelstype=chaninfo.chantype; 
+      hdr.chaninfo=chaninfo;
     elseif isempty(channels) 
     	ft_warning(['No channel selected, see hdr.chaninfo. \nAvailable CFG.CHANTYPEs are: ',strjoin(unique(chaninfo.chantype),' ')]);
       ft_error('Use chantype=''chaninfo'' for ft_read_header to return hdr with hdf.chaninfo');
