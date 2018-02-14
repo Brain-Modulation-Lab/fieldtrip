@@ -500,10 +500,11 @@ switch headerformat
       elseif numel(chantype_split) > 2
         ft_error('Use : to specify skipfactor, e.g. analog:10')
       end
-      chan_sel=strncmpi(orig_label,chantype{c},length(chantype{c}));
+      chan_sel=~cellfun(@isempty,regexp(orig_label,chantype{c}));
+      %chan_sel=strncmpi(orig_label,chantype{c},length(chantype{c}));
       if sum(chan_sel)==0
         if ~strcmp(chantype{c},'chaninfo')
-          ft_warning(strjoin({'unknown chantype ',chantype{c}}));
+          ft_error('FieldTip:ft_read_header:blackrock_nsx','unknown chantype %s, available channels are %s',chantype{c},strjoin(orig_label));
         end
       else
         channels=[channels, orig_label(chan_sel)];
@@ -524,8 +525,7 @@ switch headerformat
     	channelstype=chaninfo.chantype; 
       hdr.chaninfo=chaninfo;
     elseif isempty(channels) 
-    	ft_warning(['No channel selected, see hdr.chaninfo. \nAvailable CFG.CHANTYPEs are: ',strjoin(unique(chaninfo.chantype),' ')]);
-      ft_error('Use chantype=''chaninfo'' for ft_read_header to return hdr with hdf.chaninfo');
+      ft_error('FieldTip:ft_read_header:blackrock_nsx','No channel selected. Use chantype=''chaninfo'' for ft_read_header to return hdr with hdf.chaninfo\nAvailable CFG.CHANTYPEs are: %s',strjoin(unique(chaninfo.chantype)));
     end
     
     hdr.Fs          = orig.MetaTags.SamplingFreq/skipfactor;
@@ -2004,13 +2004,19 @@ switch headerformat
       Fs=unique(chan_t.Fs);
       T0=unique(chan_t.T0);
       nSamples=unique(chan_t.nSamples);
-      if length(Fs)>1 || length(T0)>1 
+   
+      if length(Fs)>1 
         chan_t %; printing table for user
-        ft_error('inconsistent channels with different sampling rates or initial times');
+        ft_error('inconsistent channels with different sampling rates for %s',filename);
+      end      
+      if length(T0)>1 
+        chan_t %; printing table for user
+        ft_warning('inconsistent channels with different initial times for %s. Selecting minimum time',filename);
+        T0 = min(T0);
       end
       if length(nSamples)>1
         chan_t %; printing table for user
-        ft_warning('inconsistent number of samples across channels. Selecting minimun nSample')
+        ft_warning('inconsistent number of samples across channels for %s. Selecting minimun nSample',filename)
         nSamples=min(nSamples);
       end
       
