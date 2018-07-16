@@ -127,6 +127,13 @@ dataformat      = ft_getopt(varargin, 'dataformat');
 chanunit        = ft_getopt(varargin, 'chanunit');
 timestamp       = ft_getopt(varargin, 'timestamp');
 
+%%%%%%%%%%
+
+% for loading both JH18I003 BlackRock files
+hdr.nSamples = max(hdr.nSamples);
+
+%%%%%%%%%%
+
 % this allows blocking reads to avoid having to poll many times for online processing
 blocking         = ft_getopt(varargin, 'blocking', false);  % true or false
 timeout          = ft_getopt(varargin, 'timeout', 5);       % seconds
