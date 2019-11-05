@@ -1,6 +1,6 @@
 function [segmented] = ft_volumesegment(cfg, mri)
 
-% FT_VOLUMESEGMENT segments an anatomical MRI. The behaviour depends on the output requested. It can
+% FT_VOLUMESEGMENT segments an anatomical MRI. The behavior depends on the output requested. It can
 % return probabilistic tissue maps of gray/white/csf compartments, a skull-stripped anatomy, or
 % binary masks representing the brain surface, skull, or scalp surface.
 %
@@ -175,6 +175,8 @@ cfg = ft_checkconfig(cfg, 'deprecated',{'coordsys', 'keepintermediate'});
 % as of march 2017 keepintermediate is deprecated, does not seem to be
 % used, nor sensible. If result files are to be kept, use cfg.write
 
+cfg = ft_checkconfig(cfg, 'renamedval', {'output', 'skin', 'scalp'});
+
 % check if the input data is valid for this function
 mri = ft_checkdata(mri, 'datatype', 'volume', 'feedback', 'yes', 'hasunit', 'yes', 'hascoordsys', 'yes');
 
@@ -236,7 +238,7 @@ if ~isfield(cfg, 'name')
     ft_error('you must specify the output filename in cfg.name');
   end
 end
-[pathstr, name, ~] = fileparts(cfg.name);
+[pathstr, name] = fileparts(cfg.name);
 cfg.name = fullfile(pathstr, name); % remove any possible file extension, to be added later
 
 if ~iscell(cfg.output)
@@ -274,7 +276,7 @@ end
 
 if cfg.downsample~=1
   % optionally downsample the anatomical and/or functional volumes
-  tmpcfg = keepfields(cfg, {'downsample', 'showcallinfo'});
+  tmpcfg = keepfields(cfg, {'downsample', 'spmversion', 'showcallinfo'});
   tmpcfg.smooth = 'no'; % smoothing is done in ft_volumesegment itself
   mri = ft_volumedownsample(tmpcfg, mri);
   % restore the provenance information
@@ -285,6 +287,7 @@ end
 % create the tissue probability maps if needed
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if dotpm
+  
   if isdeployed
     % ensure that these exist in this case, otherwise deal with the defaults below
     cfg = ft_checkconfig(cfg, 'required', {'template' 'tpm'});
@@ -360,8 +363,8 @@ if dotpm
       VF = ft_write_mri([cfg.name, '.img'], mri.anatomy, 'transform', mri.transform, 'spmversion', cfg.spmversion, 'dataformat', 'nifti_spm');
 
       fprintf('performing the segmentation on the specified volume\n');
-      p       = spm_preproc(VF, px);
-      [po, ~] = spm_prep2sn(p);
+      p         = spm_preproc(VF, px);
+      [po, dum] = spm_prep2sn(p);
       
       % this writes a mat file, may be needed for Dartel, not sure yet
       save([cfg.name '_sn.mat'],'-struct','po');
@@ -378,7 +381,7 @@ if dotpm
       spm_preproc_write(po, opts);
 
       % generate the list of filenames that contains the segmented volumes
-      [pathstr, name, ~] = fileparts(cfg.name);
+      [pathstr, name] = fileparts(cfg.name);
       filenames = {fullfile(pathstr,['c1', name, '.img']);...
                    fullfile(pathstr,['c2', name, '.img']);...
                    fullfile(pathstr,['c3', name, '.img'])};
@@ -398,8 +401,8 @@ if dotpm
         VF = ft_write_mri([cfg.name, '.nii'], mri.anatomy, 'transform', mri.transform, 'spmversion', cfg.spmversion, 'dataformat', 'nifti_spm');
         
         fprintf('performing the segmentation on the specified volume, using the old-style segmentation\n');
-        p       = spm_preproc(VF, px);
-        [po, ~] = spm_prep2sn(p);
+        p         = spm_preproc(VF, px);
+        [po, dum] = spm_prep2sn(p);
       
         % this write a mat file, may be needed for Dartel, not sure yet
         save([cfg.name '_sn.mat'],'-struct','po');
@@ -416,13 +419,15 @@ if dotpm
         spm_preproc_write(po, opts);
         
         % generate the list of filenames that contains the segmented volumes
-        [pathstr, name, ~] = fileparts(cfg.name);
+        [pathstr, name] = fileparts(cfg.name);
         filenames = {fullfile(pathstr,['c1', name, '.nii']);...
                      fullfile(pathstr,['c2', name, '.nii']);...
                      fullfile(pathstr,['c3', name, '.nii'])};
         
         
       elseif strcmp(cfg.spmmethod, 'new') || strcmp(cfg.spmmethod, 'mars')
+        cfg.tpm = ft_getopt(cfg, 'tpm');
+        cfg.tpm = char(cfg.tpm);
         if ~isfield(cfg, 'tpm') || isempty(cfg.tpm)
           cfg.tpm = fullfile(spm('dir'),'tpm','TPM.nii');
         end
@@ -465,7 +470,7 @@ if dotpm
         save([cfg.name '_seg8.mat'],'-struct','p');
         
        
-        [pathstr, name, ~] = fileparts(cfg.name);
+        [pathstr, name] = fileparts(cfg.name);
         filenames = {fullfile(pathstr,['c1', name, '.nii']);...
                      fullfile(pathstr,['c2', name, '.nii']);...
                      fullfile(pathstr,['c3', name, '.nii']);...
@@ -490,7 +495,7 @@ if dotpm
   end
   
   if strcmp(cfg.write, 'no')
-    [pathstr, name, ~] = fileparts(cfg.name);
+    [pathstr, name] = fileparts(cfg.name);
     prefix = {'c1';'c2';'c3';'c3';'c4';'c5';'c6';'m';'y_';''};
     suffix = {'_seg1.hdr';'_seg2.hdr';'_seg3.hdr';'_seg1.img';'_seg2.img';'_seg3.img';'_seg1.mat';'_seg2.mat';'_seg3.mat';'.hdr';'.img';'.nii'};
     for k = 1:numel(prefix)
@@ -634,7 +639,7 @@ elseif  ~isempty(intersect(outp, {'white' 'gray' 'csf' 'brain' 'skull' 'scalp' '
       % output: scalp (cummulative) (if this is the only requested output)
       if numel(outp)==1
         segmented.scalp = scalpmask;
-		remove(strcmp(remove,'scalp'))=[];
+		    remove(strcmp(remove,'scalp'))=[];
         break
       end
     end   % end scalp
@@ -660,8 +665,8 @@ elseif  ~isempty(intersect(outp, {'white' 'gray' 'csf' 'brain' 'skull' 'scalp' '
       brain_ss = cast(brain, class(segmented.anatomy));
       segmented.anatomy = segmented.anatomy.*brain_ss;
       clear brain_ss
-      remove(strcmp(remove,'skullstrip'))=[];
-	  remove(strcmp(remove,'anatomy'))=[];
+      remove(strcmp(remove,'skullstrip')) = [];
+	    remove(strcmp(remove,'anatomy'))    = [];
       if numel(outp)==1
         break
       end
@@ -681,8 +686,8 @@ elseif  ~isempty(intersect(outp, {'white' 'gray' 'csf' 'brain' 'skull' 'scalp' '
 
       % output: gray, white, csf
     elseif any(strcmp(outp, 'gray')) || any(strcmp(outp, 'white')) || any(strcmp(outp, 'csf'))
-      [~, tissuetype] = max(cat(4, segmented.csf, segmented.gray, segmented.white), [], 4);
-      clear dummy
+      [dum, tissuetype] = max(cat(4, segmented.csf, segmented.gray, segmented.white), [], 4);
+      clear dum
       if any(strcmp(outp, 'white'))
         segmented.white = (tissuetype == 3) & brainmask;
         remove(strcmp(remove,'white'))=[];

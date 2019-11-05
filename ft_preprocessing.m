@@ -95,7 +95,7 @@ function [data] = ft_preprocessing(cfg, data)
 %   cfg.hilbert       = 'no', 'abs', 'complex', 'real', 'imag', 'absreal', 'absimag' or 'angle' (default = 'no')
 %   cfg.rectify       = 'no' or 'yes' (default = 'no')
 %   cfg.precision     = 'single' or 'double' (default = 'double')
-%   cfg.absdiff       = 'no' or 'yes', computes absolute derivative (i.e.first derivative then rectify)
+%   cfg.absdiff       = 'no' or 'yes', computes absolute derivative (i.e. first derivative then rectify)
 %
 % Prperocessing options that only apply to MEG data are
 %   cfg.coordsys      = string, 'head' or 'dewar' (default = 'head')
@@ -104,7 +104,7 @@ function [data] = ft_preprocessing(cfg, data)
 % Preprocessing options that you should only use for EEG data are
 %   cfg.reref         = 'no' or 'yes' (default = 'no')
 %   cfg.refchannel    = cell-array with new EEG reference channel(s), this can be 'all' for a common average reference
-%   cfg.refmethod     = 'avg' or 'median' (default = 'avg')
+%   cfg.refmethod     = 'avg', 'median', or 'bipolar' for bipolar derivation of sequential channels (default = 'avg')
 %   cfg.implicitref   = 'label' or empty, add the implicit EEG reference as zeros (default = [])
 %   cfg.montage       = 'no' or a montage structure, see FT_APPLY_MONTAGE (default = 'no')
 %
@@ -217,7 +217,7 @@ cfg.montage        = ft_getopt(cfg, 'montage', 'no');
 cfg.updatesens     = ft_getopt(cfg, 'updatesens', 'no');    % in case a montage or rereferencing is specified
 cfg.chantype       = ft_getopt(cfg, 'chantype', {});        %2017.10.10 AB required for NeuroOmega files
 
-% these options relate to the actual preprocessing, it is neccessary to specify here because of padding
+% these options relate to the actual preprocessing, it is necessary to specify here because of padding
 cfg.dftfilter      = ft_getopt(cfg, 'dftfilter', 'no');
 cfg.lpfilter       = ft_getopt(cfg, 'lpfilter', 'no');
 cfg.hpfilter       = ft_getopt(cfg, 'hpfilter', 'no');
@@ -226,7 +226,7 @@ cfg.bsfilter       = ft_getopt(cfg, 'bsfilter', 'no');
 cfg.medianfilter   = ft_getopt(cfg, 'medianfilter', 'no');
 cfg.padtype        = ft_getopt(cfg, 'padtype', 'data');
 
-% these options relate to the actual preprocessing, it is neccessary to specify here because of channel selection
+% these options relate to the actual preprocessing, it is necessary to specify here because of channel selection
 cfg.reref          = ft_getopt(cfg, 'reref', 'no');
 cfg.refchannel     = ft_getopt(cfg, 'refchannel', {});
 cfg.refmethod      = ft_getopt(cfg, 'refmethod', 'avg');
@@ -296,7 +296,7 @@ if hasdata
         cfg.padtype = 'mirror';
       end
     else
-      % no filtering will be done, hence no padding is neccessary
+      % no filtering will be done, hence no padding is necessary
       padding = 0;
     end
     % update the configuration (in seconds) for external reference
@@ -425,12 +425,12 @@ else
     cfg.trl = trl;
   end
   
-  % this should be a cell array
+  % this should be a cell-array
   if ~iscell(cfg.channel) && ischar(cfg.channel)
     cfg.channel = {cfg.channel};
   end
   
-  % this should be a cell array
+  % this should be a cell-array
   if ~iscell(cfg.refchannel) && ischar(cfg.refchannel)
     cfg.refchannel = {cfg.refchannel};
   end
@@ -462,7 +462,7 @@ else
         strcmp(cfg.medianfilter, 'yes')
       padding = round(cfg.padding * hdr.Fs);
     else
-      % no filtering will be done, hence no padding is neccessary
+      % no filtering will be done, hence no padding is necessary
       padding = 0;
     end
     % update the configuration (in seconds) for external reference
@@ -556,7 +556,7 @@ else
             ft_error('unsupported requested direction of padding');
         end
         
-        if strcmp(cfg.padtype, 'data');
+        if strcmp(cfg.padtype, 'data')
           begsample  = cfg.trl(i,1) - begpadding;
           endsample  = cfg.trl(i,2) + endpadding;
         else
@@ -653,10 +653,16 @@ if strcmp(cfg.updatesens, 'yes')
   if ~isempty(cfg.montage) && ~isequal(cfg.montage, 'no')
     montage = cfg.montage;
   elseif strcmp(cfg.reref, 'yes')
-    tmpcfg = keepfields(cfg, {'reref', 'implicitref', 'refchannel', 'channel'});
-    montage = ft_prepare_montage(tmpcfg, data);
+    if strcmp(cfg.refmethod, 'bipolar') || strcmp(cfg.refmethod, 'avg')
+      tmpcfg = keepfields(cfg, {'refmethod', 'implicitref', 'refchannel', 'channel'});
+      tmpcfg.showcallinfo = 'no';
+      montage = ft_prepare_montage(tmpcfg, data);
+    else
+      % do not update the sensor description
+      montage = [];
+    end
   else
-    % do not update anything
+    % do not update the sensor description
     montage = [];
   end
   
@@ -672,7 +678,7 @@ if strcmp(cfg.updatesens, 'yes')
       dataout.grad = ft_apply_montage(dataout.grad, montage, 'feedback', 'none', 'keepunused', 'no', 'balancename', bname);
     end
     if isfield(dataout, 'elec')
-      ft_info('applying the montage to the grad structure\n');
+      ft_info('applying the montage to the elec structure\n');
       dataout.elec = ft_apply_montage(dataout.elec, montage, 'feedback', 'none', 'keepunused', 'no', 'balancename', bname);
     end
     if isfield(dataout, 'opto')
