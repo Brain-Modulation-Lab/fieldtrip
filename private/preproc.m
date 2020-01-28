@@ -128,6 +128,7 @@ function [dat, label, time, cfg] = preproc(dat, label, time, cfg, begpadding, en
 
 % compute fsample
 fsample = 1./nanmean(diff(time));
+fsample = round(fsample,8); %Added becausen without this line, errors in rounding due to IEEE 754 convention cause issues.
 
 if nargin<5 || isempty(begpadding)
   begpadding = 0;
