@@ -2326,7 +2326,18 @@ switch headerformat
     hdr.nTrials     = 1; % continuous data
     hdr.label       = {tmp.hdr.entityinfo(tmp.list.analog(tmp.analog.contcount~=0)).EntityLabel}; %%% contains non-unique chans?
     hdr.orig        = tmp; % remember the original header
-    
+ 
+  case 'neuroshare_nfx'
+    ft_hastoolbox('ripple_neuroshare', 1);
+    tmp = read_neuroshare(filename);
+    hdr.Fs          = tmp.hdr.analoginfo(end).SampleRate; % take the sampling freq from the last analog channel (assuming this is the same for all chans)
+    hdr.nChans      = length(tmp.list.analog([tmp.hdr.entityinfo(tmp.list.analog).ItemCount]~=0)); % get the analog channels, only the ones that are not empty
+    hdr.nSamples    = max([tmp.hdr.entityinfo(tmp.list.analog).ItemCount]); % take the number of samples from the longest channel
+    hdr.nSamplesPre = 0; % continuous data
+    hdr.nTrials     = 1; % continuous data
+    hdr.label       = {tmp.hdr.entityinfo(tmp.list.analog([tmp.hdr.entityinfo(tmp.list.analog).ItemCount]~=0)).EntityLabel}; %%% contains non-unique chans?
+    hdr.orig        = tmp; % remember the original header
+
   case 'nwb'
     ft_hastoolbox('MatNWB', 1);	% when I run this locally outside of ft_read_header it does not work for me
     try

@@ -608,7 +608,8 @@ elseif filetype_check_extension(filename, '.pos')
   manufacturer = 'BrainProducts/CTF/Polhemus?'; % actually I don't know whose software it is
   content = 'electrode positions';
   
-  % known Blackrock Microsystems file types
+  % known Blackrock Microsystems file types (also used by Ripple as part of the 
+  % neuroshare data standard)
 elseif strncmp(x,'.ns',3) && (filetype_check_header(filename, 'NEURALCD') || filetype_check_header(filename, 'NEURALSG'))
   type = 'blackrock_nsx';
   manufacturer = 'Blackrock Microsystems';
@@ -617,6 +618,12 @@ elseif filetype_check_extension(filename, '.nev') && filetype_check_header(filen
   type = 'blackrock_nev';
   manufacturer = 'Blackrock Microsystems';
   contenct = 'extracellular electrode spike information';
+
+  % known NeuroShare float files (Ripple neuro)
+elseif strncmp(x,'.nf',3) && (filetype_check_header(filename, 'NEUCDFLT'))
+  type = 'neuroshare_nfx';
+  manufacturer = 'Ripple Neuro';
+  content = 'Neural Continuous Data Float';    
   
   % known Neuralynx file types
 elseif filetype_check_extension(filename, '.nev') || filetype_check_extension(filename, '.Nev')

@@ -75,6 +75,7 @@ url = {
   'EEGSF'      'see http://eeg.sourceforge.net'  % alternative name
   'MRI'        'see http://eeg.sourceforge.net'  % alternative name
   'NEUROSHARE' 'see http://www.neuroshare.org'
+  'RIPPLE_NEUROSHARE' 'see https://rippleneuro.com'
   'BESA'         'see http://www.besa.de/downloads/matlab/ and get the "BESA MATLAB Readers"'
   'MATLAB2BESA'  'see http://www.besa.de/downloads/matlab/ and get the "MATLAB to BESA Export functions"'
   'EEPROBE'    'see http://www.ant-neuro.com, or contact Maarten van der Velde'
@@ -242,6 +243,8 @@ switch toolbox
     dependency = {'avw_hdr_read', 'avw_img_read'};
   case 'NEUROSHARE'
     dependency = {'ns_OpenFile', 'ns_SetLibrary', 'ns_GetAnalogData'};
+  case 'RIPPLE_NEUROSHARE'
+    dependency = {'ns_OpenFile', 'ns_GetAnalogInfo', 'ns_GetAnalogData', 'ns_GetLastErrorMsg'};
   case 'ARTINIS'
     dependency = {'read_artinis_oxy3'};
   case 'BESA'
