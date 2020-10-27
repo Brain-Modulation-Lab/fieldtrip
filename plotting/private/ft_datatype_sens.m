@@ -168,7 +168,23 @@ switch version
     if isnirs
       sens = renamefields(sens, 'transmits', 'tra'); % this makes it more consistent with EEG and MEG
       sens = removefields(sens, {'laserstrength'});
-    end
+      
+      if isfield(sens, 'optotype') && isfield(sens, 'tra')
+        % the read_artinis_oxy3 file returns the wrong sign for the receivers and transmitters
+        % but since it is p-code, it cannot be fixed
+        tmp = sens.tra(:, strcmp(sens.optotype, 'transmitter')); correctT = all(tmp(:)>=0);
+        tmp = sens.tra(:, strcmp(sens.optotype, 'receiver'   )); correctR = all(tmp(:)<=0);
+        if ~correctT
+          ft_warning('flipping sign for transmitters');
+          sens.tra(:, strcmp(sens.optotype, 'transmitter')) = -sens.tra(:, strcmp(sens.optotype, 'transmitter'));
+        end
+        if ~correctR
+          ft_warning('flipping sign for receivers');
+          sens.tra(:, strcmp(sens.optotype, 'receiver')) = -sens.tra(:, strcmp(sens.optotype, 'receiver'));
+        end
+      end
+      
+    end % ifnirs
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   case '2019'

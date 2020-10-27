@@ -217,6 +217,15 @@ cfg.allowoverlap    = ft_getopt(cfg, 'allowoverlap', 'no');          % for ft_fe
 cfg.contournum      = ft_getopt(cfg, 'contournum', 0);               % topoplot contour lines
 cfg.trl             = ft_getopt(cfg, 'trl');
 
+% construct the low-level options as key-value pairs, these are passed to FT_READ_HEADER
+headeropt = {};
+headeropt  = ft_setopt(headeropt, 'headerformat',   ft_getopt(cfg, 'headerformat'));        % is passed to low-level function, empty implies autodetection
+headeropt  = ft_setopt(headeropt, 'readbids',       ft_getopt(cfg, 'readbids'));            % is passed to low-level function
+headeropt  = ft_setopt(headeropt, 'coordsys',       ft_getopt(cfg, 'coordsys', 'head'));    % is passed to low-level function
+headeropt  = ft_setopt(headeropt, 'coilaccuracy',   ft_getopt(cfg, 'coilaccuracy'));        % is passed to low-level function
+headeropt  = ft_setopt(headeropt, 'checkmaxfilter', ft_getopt(cfg, 'checkmaxfilter'));      % this allows to read non-maxfiltered neuromag data recorded with internal active shielding
+headeropt  = ft_setopt(headeropt, 'chantype',       ft_getopt(cfg, 'chantype', {}));        % 2017.10.10 AB required for NeuroOmega files
+
 if ~isfield(cfg, 'viewmode')
   % butterfly, vertical, component
   if hascomp
@@ -336,7 +345,7 @@ else
   cfg = ft_checkconfig(cfg, 'renamed',    {'datatype', 'continuous'});
   cfg = ft_checkconfig(cfg, 'renamedval', {'continuous', 'continuous', 'yes'});
   % read the header from file
-  hdr = ft_read_header(cfg.headerfile, 'headerformat', cfg.headerformat);
+  hdr = ft_read_header(cfg.headerfile, headeropt{:});
   
   if isempty(cfg.continuous)
     if hdr.nTrials==1
@@ -429,7 +438,7 @@ if ischar(cfg.ylim)
     dat = data.trial{sel}(chansel,:);
   else
     % one second of data is read from file to determine the vertical scaling
-    dat = ft_read_data(cfg.datafile, 'header', hdr, 'begsample', 1, 'endsample', round(hdr.Fs), 'chanindx', chansel, 'checkboundary', strcmp(cfg.continuous, 'no'), 'dataformat', cfg.dataformat, 'headerformat', cfg.headerformat);
+    dat = ft_read_data(cfg.datafile, 'header', hdr, 'begsample', 1, 'endsample', round(hdr.Fs), 'chanindx', chansel, 'checkboundary', strcmp(cfg.continuous, 'no'), 'dataformat', cfg.dataformat, headeropt{:});
   end % if hasdata
   % convert the data to another numeric precision, i.e. double, single or int32
   if ~isempty(cfg.precision)
@@ -573,7 +582,8 @@ opt = [];
 if hasdata
   opt.orgdata   = data;
 else
-  opt.orgdata   = [];      % this means that it will read from cfg.dataset
+  opt.orgdata   = [];        % this means that it will read from cfg.dataset
+  opt.headeropt = headeropt; % these are passed to FT_READ_HEADER and FT_READ_DATA
 end
 if strcmp(cfg.continuous, 'yes')
   opt.trialviewtype = 'segment';
@@ -1616,7 +1626,7 @@ else
 end
 
 if isempty(opt.orgdata)
-  dat = ft_read_data(cfg.datafile, 'header', opt.hdr, 'begsample', begsample, 'endsample', endsample, 'chanindx', chanindx, 'checkboundary', ~istrue(cfg.continuous), 'dataformat', cfg.dataformat, 'headerformat', cfg.headerformat);
+  dat = ft_read_data(cfg.datafile, 'header', opt.hdr, 'begsample', begsample, 'endsample', endsample, 'chanindx', chanindx, 'checkboundary', ~istrue(cfg.continuous), 'dataformat', cfg.dataformat, opt.headeropt{:});
 else
   dat = ft_fetch_data(opt.orgdata, 'header', opt.hdr, 'begsample', begsample, 'endsample', endsample, 'chanindx', chanindx, 'allowoverlap', cfg.allowoverlap);
 end
@@ -1796,8 +1806,12 @@ if strcmp(cfg.plotevents, 'yes')
       
       % compute the time of the event
       eventtim(ievent) = (event(ievent).sample-begsample)/opt.fsample + opt.hlim(1);
-      
-      lh = ft_plot_line([eventtim(ievent) eventtim(ievent)], [-1 1], 'tag', 'event', 'color', eventcol{ievent}, 'hpos', opt.hpos, 'vpos', opt.vpos, 'width', opt.width, 'height', opt.height, 'hlim', opt.hlim, 'vlim', [-1 1]);
+      % if line event --> plot line, else plot event duration as a box 
+      if isempty(event(ievent).duration) || event(ievent).duration==0
+        lh = ft_plot_line([eventtim(ievent) eventtim(ievent)], [-1 1], 'tag', 'event', 'color', eventcol{ievent}, 'hpos', opt.hpos, 'vpos', opt.vpos, 'width', opt.width, 'height', opt.height, 'hlim', opt.hlim, 'vlim', [-1 1]);
+      else
+        lh = ft_plot_box([eventtim(ievent) eventtim(ievent)+event(ievent).duration/opt.fsample -1 1], 'tag', 'event', 'edgecolor', eventcol{ievent}, 'facealpha', 0.1, 'facecolor', eventcol{ievent},  'hpos', opt.hpos,  'vpos', opt.vpos, 'width', opt.width, 'height', opt.height, 'hlim', opt.hlim, 'vlim', [-1 1]);
+      end
       
       % store this data in the line object so that it can be displayed in the
       % data cursor (see subfunction cb_datacursortext below)
