@@ -2329,7 +2329,7 @@ switch headerformat
  
   case 'neuroshare_nfx'
     ft_hastoolbox('ripple_neuroshare', 1);
-    tmp = read_neuroshare(filename);
+    tmp = read_ripple_neuroshare(filename);
     hdr.Fs          = tmp.hdr.analoginfo(end).SampleRate; % take the sampling freq from the last analog channel (assuming this is the same for all chans)
     hdr.nChans      = length(tmp.list.analog([tmp.hdr.entityinfo(tmp.list.analog).ItemCount]~=0)); % get the analog channels, only the ones that are not empty
     hdr.nSamples    = max([tmp.hdr.entityinfo(tmp.list.analog).ItemCount]); % take the number of samples from the longest channel
