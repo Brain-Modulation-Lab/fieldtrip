@@ -1335,6 +1335,11 @@ switch dataformat
     tmp = read_neuroshare(filename, 'readanalog', 'yes', 'chanindx', chanindx, 'begsample', begsample, 'endsample', endsample);
     dat = tmp.analog.data';
     
+  case 'neuroshare_nfx' 
+    ft_hastoolbox('ripple_neuroshare', 1);
+    tmp = read_ripple_neuroshare(filename, 'readanalog', 'yes', 'chanindx', chanindx, 'begsample', begsample, 'endsample', endsample);
+    dat = tmp.analog.data';
+    
   case 'neuroprax_eeg'
     tmp = np_readdata(filename, hdr.orig, begsample - 1, endsample - begsample + 1, 'samples');
     dat = tmp.data(:,chanindx)';
