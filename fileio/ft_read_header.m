@@ -536,38 +536,52 @@ switch headerformat
     
     orig = openNSx(filename, 'noread');
     channelstype=regexp({orig.ElectrodesInfo.Label},'[A-Za-z]+','match','once');
+    chan_other_sel = cellfun(@isempty,channelstype);
+    channelstype(chan_other_sel)={'other'};
     chaninfo=table({orig.ElectrodesInfo.ElectrodeID}',...
       transpose(deblank({orig.ElectrodesInfo.Label})),[channelstype]',...
       {orig.ElectrodesInfo.ConnectorBank}',{orig.ElectrodesInfo.ConnectorPin}',...
       transpose(deblank({orig.ElectrodesInfo.AnalogUnits})),...
       'VariableNames',{'id' 'label' 'chantype' 'bank' 'pin' 'unit'});
     
+	channels={}; channelsunit={}; skipfactor=[];
     if isempty(chantype)
-      chantype = unique(channelstype,'stable');
-    end
-    
-    %selecting channel according to chantype
-    orig_label=deblank({orig.ElectrodesInfo.Label});
-    orig_unit=deblank({orig.ElectrodesInfo.AnalogUnits});
-    channels={}; channelstype={}; channelsunit={}; skipfactor=[];
-    for c=1:length(chantype)
-      chantype_split=strsplit(chantype{c},':');
-      if numel(chantype_split) == 2
-        chantype{c}=chantype_split{1};
-        skipfactor=[skipfactor,str2double(chantype_split{2})];
-      elseif numel(chantype_split) > 2
-        ft_error('Use : to specify skipfactor, e.g. analog:10')
-      end
-      chan_sel=~cellfun(@isempty,regexp(orig_label,chantype{c}));
-      if sum(chan_sel)==0
-        if ~strcmp(chantype{c},'chaninfo')
-          ft_error('unknown chantype %s, available channels are %s',chantype{c},strjoin(orig_label));
+        %if chantype not provided load all channels in original order
+        channels=deblank({orig.ElectrodesInfo.Label});
+        channelsunit=deblank({orig.ElectrodesInfo.AnalogUnits});
+    else
+        %selecting channel according to chantype
+        channelstype={};
+        orig_label=deblank({orig.ElectrodesInfo.Label});
+        orig_unit=deblank({orig.ElectrodesInfo.AnalogUnits});
+        for c=1:length(chantype)
+
+          chantype_split=strsplit(chantype{c},':');
+
+          if numel(chantype_split) == 2
+            chantype{c}=chantype_split{1};
+            skipfactor=[skipfactor,str2double(chantype_split{2})];
+          elseif numel(chantype_split) > 2
+            ft_error('Use : to specify skipfactor, e.g. analog:10')
+          end
+
+          if strcmp(chantype{c},'other')
+            chan_sel = chan_other_sel;
+          else
+            chan_sel=~cellfun(@isempty,regexp(orig_label,chantype{c}));
+          end
+
+          if sum(chan_sel)==0
+            if ~strcmp(chantype{c},'chaninfo')
+              ft_error('unknown chantype %s, available channels are %s',chantype{c},strjoin(orig_label));
+            end
+          else
+            channels=[channels, orig_label(chan_sel)];
+            channelsunit=[channelsunit, orig_unit(chan_sel)];
+            channelstype=[channelstype, repmat(chantype(c), 1, sum(chan_sel))];
+          end
+
         end
-      else
-        channels=[channels, orig_label(chan_sel)];
-        channelsunit=[channelsunit, orig_unit(chan_sel)];
-        channelstype=[channelstype, repmat(chantype(c), 1, sum(chan_sel))];
-      end
     end
     
     skipfactor=unique(skipfactor);
