@@ -2343,7 +2343,40 @@ switch headerformat
  
   case 'neuroshare_nfx'
     ft_hastoolbox('ripple_neuroshare', 1);
+    
     tmp = read_ripple_neuroshare(filename);
+%     if numel(tmp.hdr.entityinfo) ~=  numel(tmp.hdr.analoginfo)
+%         keyboard
+%         %debug this case 20210427AB
+%     end
+% 
+%     analog_entity_info = tmp.hdr.entityinfo(tmp.list.analog([tmp.hdr.entityinfo(tmp.list.analog).ItemCount]~=0));
+%     analog_info = tmp.hdr.analoginfo(tmp.list.analog([tmp.hdr.entityinfo(tmp.list.analog).ItemCount]~=0));
+%     
+%     orig_label=deblank({analog_entity_info.EntityLabel});
+%     if isempty(chantype)
+%         %if chantype not provided load all channels in original order
+%         chan_sel=ones(1,numel(orig_label));
+%     else
+%         chan_sel=zeros(1,numel(orig_label));
+%         for c=1:length(chantype)
+%           chan_sel= chan_sel | ~cellfun(@isempty,regexp(orig_label,chantype{c}));
+%         end
+%         if sum(chan_sel)==0
+%             ft_error('unknown chantype %s, available channels are %s',chantype{c},strjoin(orig_label));
+%         end
+%     end
+% 	channels = orig_label(chan_sel);
+%     %channelsunit = deblank({analog_info(chan_sel).Units});
+%   
+%     hdr.Fs          = unique([analog_info.SampleRate]); % take the sampling freq from the last analog channel (assuming this is the same for all chans)
+%     hdr.nChans      = length(channels); % get the analog channels, only the ones that are not empty
+%     hdr.nSamples    = max([analog_entity_info(chan_sel).ItemCount]); % take the number of samples from the longest channel
+%     hdr.nSamplesPre = 0; % continuous data
+%     hdr.nTrials     = 1; % continuous data
+%     hdr.label       = channels; %%% contains non-unique chans?
+%     hdr.orig        = tmp; % remember the original header
+%     
     hdr.Fs          = tmp.hdr.analoginfo(end).SampleRate; % take the sampling freq from the last analog channel (assuming this is the same for all chans)
     hdr.nChans      = length(tmp.list.analog([tmp.hdr.entityinfo(tmp.list.analog).ItemCount]~=0)); % get the analog channels, only the ones that are not empty
     hdr.nSamples    = max([tmp.hdr.entityinfo(tmp.list.analog).ItemCount]); % take the number of samples from the longest channel

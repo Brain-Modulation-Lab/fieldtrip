@@ -138,6 +138,11 @@ if strcmp(fileInfo.FileTypeID, 'NEURALCD') || strcmp(fileInfo.FileTypeID, 'NEUCD
     % chanIDX = ismembc2(hFile.Entity(EntityID).ElectrodeID,...
     % fileInfo.ElectrodeList);
     chanIDX = find(fileInfo.ElectrodeList == hFile.Entity(EntityID).ElectrodeID);
+    
+    %20210413AB When nf6 files have hifreq and raw streams the folloing
+    %code fails. 
+    chanIDX = chanIDX(1);
+    
     % calculate the start of the CC extended header
     headerPos = 314 + 66*(chanIDX - 1);
     % skip to ElectrodeLabel    
